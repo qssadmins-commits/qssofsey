@@ -6,31 +6,40 @@ function initNav() {
   if (!toggle || !links || !navEl) return;
   toggle.type = "button";
 
+  function openNav() {
+    links.classList.add("open");
+    toggle.setAttribute("aria-expanded", "true");
+    toggle.setAttribute("aria-label", "Close navigation menu");
+    document.body.style.overflow = "hidden";
+  }
+
   function closeNav() {
     links.classList.remove("open");
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Open navigation menu");
+    document.body.style.overflow = "";
   }
 
   toggle.addEventListener("click", () => {
-    const open = links.classList.toggle("open");
-    toggle.setAttribute("aria-expanded", String(open));
-    toggle.setAttribute(
-      "aria-label",
-      open ? "Close navigation menu" : "Open navigation menu",
-    );
+    links.classList.contains("open") ? closeNav() : openNav();
   });
 
   links.querySelectorAll("a").forEach((link) => {
-    link.addEventListener("click", () => {
-      closeNav();
-    });
+    link.addEventListener("click", closeNav);
   });
 
   document.addEventListener("click", (event) => {
     if (!navEl.contains(event.target) && links.classList.contains("open")) {
       closeNav();
     }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && links.classList.contains("open")) closeNav();
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 768) document.body.style.overflow = "";
   });
 }
 
