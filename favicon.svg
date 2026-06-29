@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#163d2b"/>
+  <polygon points="32,6 58,19 58,45 32,58 6,45 6,19" fill="none" stroke="#b8923a" stroke-width="2"/>
+  <polygon points="32,16 48,24 48,40 32,48 16,40 16,24" fill="none" stroke="#b8923a" stroke-width="1.2"/>
+  <text x="32" y="38" font-family="serif" font-size="22" fill="#b8923a" text-anchor="middle">ق</text>
+</svg>

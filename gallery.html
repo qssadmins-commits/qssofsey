@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gallery — QSS Seychelles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="js/theme.js"></script>
+    <script type="module" src="js/components/nav.js"></script>
+    <script type="module">
+      import { db } from "./js/firebase-config.js";
+      import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+      let allMediaItems=[];
+      window.filterGallery=function(tag,triggerEl){document.querySelectorAll(".gallery-filters button").forEach(b=>b.classList.remove("active"));if(triggerEl)triggerEl.classList.add("active");const container=document.getElementById("gallery-grid-container");const filtered=tag==="all"?allMediaItems:allMediaItems.filter(i=>i.category===tag);if(filtered.length===0){container.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:3rem 0;font-style:italic;">No photos in this category yet.</p>';return}container.innerHTML=filtered.map(item=>`<div class="gallery-item">${item.url?`<img src="${item.url}" class="gallery-image-render" alt="${item.caption?item.caption+" — community photo":"Community photo"}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'gallery-placeholder\\'><div class=\\'gallery-item-icon\\'>🖼️</div><div class=\\'gallery-item-text\\'>Image unavailable</div></div>'" />`:`<div class="gallery-placeholder"><div class="gallery-item-icon">📸</div><div class="gallery-item-text">Photo</div></div>`}${item.caption?`<div class="gallery-caption">${item.caption}</div>`:""}</div>`).join("")};
+      document.addEventListener("DOMContentLoaded",()=>{const allBtn=document.querySelector(".gallery-filters button");onSnapshot(query(collection(db,"gallery"),orderBy("createdAt","desc")),snap=>{allMediaItems=snap.docs.map(doc=>doc.data());filterGallery("all",allBtn)})});
+    </script>
+  </head>
+  <body class="geo-pattern">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <nav aria-label="Main navigation">
+      <a href="index.html" class="nav-logo" aria-label="QSS Seychelles – home"><img src="qss_logo.png" alt="" aria-hidden="true" width="42" height="42" /><div class="nav-logo-text">Quran &amp; Sunnah Society<span>Seychelles</span></div></a>
+      <ul class="nav-links" id="nav-links" role="list">
+        <li><a href="index.html">Home</a></li><li><a href="about.html">About</a></li><li><a href="events.html">Events &amp; Classes</a></li>
+        <li><a href="gallery.html" class="active" aria-current="page">Gallery</a></li>
+        <li><a href="donate.html">Donate</a></li><li><a href="contact.html">Contact</a></li><li><a href="admin.html" class="nav-admin">Dashboard</a></li>
+      </ul>
+      <div class="nav-right">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Switch to light mode" title="Switch to light mode">☀️</button>
+        <button class="nav-toggle" id="nav-toggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="nav-links"><span></span><span></span><span></span></button>
+      </div>
+    </nav>
+    <main id="main-content" class="container page-wrapper">
+      <span class="eyebrow" style="text-align:center;display:block">Media Records</span>
+      <h1 class="section-title">Community Photo Wall</h1>
+      <div class="section-rule" aria-hidden="true"><span class="section-rule-line"></span><span class="section-rule-glyph">◆</span><span class="section-rule-line"></span></div>
+      <div class="gallery-filters" role="group" aria-label="Filter gallery by category">
+        <button class="btn-outline active" onclick="filterGallery('all',this)" aria-pressed="true">All Photos</button>
+        <button class="btn-outline" onclick="filterGallery('masjid',this)" aria-pressed="false">Masjid</button>
+        <button class="btn-outline" onclick="filterGallery('gatherings',this)" aria-pressed="false">Gatherings</button>
+      </div>
+      <div id="gallery-grid-container" class="gallery-grid" aria-live="polite" aria-label="Gallery photos"></div>
+    </main>
+    <div class="geo-band" aria-hidden="true"></div>
+    <footer class="site-footer" aria-label="Site footer">
+      <div class="container footer-inner">
+        <div class="footer-brand"><div class="footer-logo-text">Quran and Sunnah Society</div><div class="footer-location">Mont Fleuri, Mahe, Seychelles</div></div>
+        <nav class="footer-links" aria-label="Footer navigation"><a href="index.html">Home</a><a href="about.html">About</a><a href="events.html">Events</a><a href="gallery.html">Gallery</a><a href="donate.html">Donate</a><a href="contact.html">Contact</a></nav>
+        <div class="footer-ayah"><span class="footer-arabic" lang="ar">وَقُل رَّبِّ زِدْنِي عِلْمًا</span><span class="footer-ref">Surah Ta-Ha · 20:114</span></div>
+      </div>
+      <div class="container footer-bottom"><p>© Quran and Sunnah Society of Seychelles · All rights reserved</p></div>
+    </footer>
+  </body>
+</html>

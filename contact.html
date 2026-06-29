@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contact Us — QSS Seychelles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="js/theme.js"></script>
+    <script type="module" src="js/components/nav.js"></script>
+  </head>
+  <body class="geo-pattern">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <nav aria-label="Main navigation">
+      <a href="index.html" class="nav-logo" aria-label="QSS Seychelles – home"><img src="qss_logo.png" alt="" aria-hidden="true" width="42" height="42" /><div class="nav-logo-text">Quran &amp; Sunnah Society<span>Seychelles</span></div></a>
+      <ul class="nav-links" id="nav-links" role="list">
+        <li><a href="index.html">Home</a></li><li><a href="about.html">About</a></li><li><a href="events.html">Events &amp; Classes</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="donate.html">Donate</a></li>
+        <li><a href="contact.html" class="active" aria-current="page">Contact</a></li>
+        <li><a href="admin.html" class="nav-admin">Dashboard</a></li>
+      </ul>
+      <div class="nav-right">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Switch to light mode" title="Switch to light mode">☀️</button>
+        <button class="nav-toggle" id="nav-toggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="nav-links"><span></span><span></span><span></span></button>
+      </div>
+    </nav>
+    <main id="main-content" class="container page-wrapper">
+      <span class="eyebrow" style="text-align:center;display:block">Get In Touch</span>
+      <h1 class="section-title">Connect With Us</h1>
+      <div class="section-rule" aria-hidden="true"><span class="section-rule-line"></span><span class="section-rule-glyph">◆</span><span class="section-rule-line"></span></div>
+      <div class="contact-grid">
+        <div class="contact-info-stack">
+          <div class="content-card contact-block"><h2>📍 Masjid Location</h2><p>His Highness Sheikh Dr. Sultan Bin Khalifa Bin Zayed Al Nahyan's Masjid (QSS Masjid),<br />Beaufond Lane, Mont Fleuri,<br />Victoria, Mahé, Seychelles</p><div class="masjid-name-note">Managed by the Quran &amp; Sunnah Society of Seychelles</div></div>
+          <div class="content-card contact-block"><h2>📞 Direct Contact</h2><div class="contact-link-row"><a href="tel:+2482546032" class="contact-link-item"><span aria-hidden="true">📞</span><span>+248 254 6032</span></a><a href="mailto:qssofsey@gmail.com" class="contact-link-item"><span aria-hidden="true">✉️</span><span>qssofsey@gmail.com</span></a><a href="https://whatsapp.com/channel/0029VbAuWHj5Ui2gzXvbGA3M" target="_blank" rel="noopener noreferrer" class="contact-link-item whatsapp"><span aria-hidden="true">💬</span><span>Join Our WhatsApp Channel</span></a></div></div>
+          <div class="content-card contact-block"><h2>🕌 Opening Hours</h2><table class="hours-table"><tbody><tr><td>Daily (Fajr – Isha)</td><td>Open for all 5 prayers</td></tr><tr><td>Friday Jumu'ah</td><td>At Dhuhr time</td></tr><tr><td>Weekend Classes</td><td>Saturday &amp; Sunday · 9:00 AM</td></tr><tr><td>Office Enquiries</td><td>Mon – Fri · 9:00 AM – 4:00 PM</td></tr></tbody></table></div>
+          <div class="content-card contact-block"><h2>🌐 Stay Connected</h2><p style="margin-bottom:0.85rem">Stay updated with our latest announcements and reminders.</p><div class="social-row"><a href="https://whatsapp.com/channel/0029VbAuWHj5Ui2gzXvbGA3M" target="_blank" rel="noopener noreferrer" class="social-btn wa"><span aria-hidden="true">💬</span> WhatsApp Channel</a></div></div>
+        </div>
+        <div class="right-col">
+          <div class="map-wrap"><iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d489.8!2d55.46097!3d-4.63356!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNMKwMzgnMDAuOCJTIDU1wrAyNyczOS41IkU!5e1!3m2!1sen!2ssc!4v1718700000000" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="QSS Masjid location on Google Maps"></iframe></div>
+          <div class="content-card">
+            <h2 style="font-family:'Cormorant Garamond',serif;color:var(--text-primary);margin-bottom:0.35rem;font-size:1.2rem;font-weight:600">✉️ Send Us a Message</h2>
+            <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:1.25rem;line-height:1.65">We'll respond as soon as possible, in shaa Allah.</p>
+            <div id="form-success" class="form-success" role="alert" aria-live="polite">✅ JazakAllahu Khayran — your message has been sent!</div>
+            <div class="contact-form" id="contact-form">
+              <div class="form-row">
+                <div class="form-group"><label for="cf-name">Your Name</label><input type="text" id="cf-name" name="name" placeholder="e.g. Ahmed Ali" autocomplete="name" required /></div>
+                <div class="form-group"><label for="cf-phone">Phone <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><input type="tel" id="cf-phone" name="phone" placeholder="+248 ..." autocomplete="tel" /></div>
+              </div>
+              <div class="form-group"><label for="cf-email">Email Address</label><input type="email" id="cf-email" name="email" placeholder="your@email.com" autocomplete="email" required /></div>
+              <div class="form-group"><label for="cf-subject">Subject</label><input type="text" id="cf-subject" name="subject" placeholder="e.g. Question about classes" /></div>
+              <div class="form-group"><label for="cf-message">Message</label><textarea id="cf-message" name="message" rows="5" placeholder="Write your message here..." required></textarea></div>
+              <button class="btn-primary" type="button" onclick="submitContactForm()" style="width:100%">Send Message</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <div class="geo-band" aria-hidden="true"></div>
+    <footer class="site-footer" aria-label="Site footer">
+      <div class="container footer-inner">
+        <div class="footer-brand"><div class="footer-logo-text">Quran and Sunnah Society</div><div class="footer-location">Mont Fleuri, Mahe, Seychelles</div></div>
+        <nav class="footer-links" aria-label="Footer navigation"><a href="index.html">Home</a><a href="about.html">About</a><a href="events.html">Events</a><a href="gallery.html">Gallery</a><a href="donate.html">Donate</a><a href="contact.html">Contact</a></nav>
+        <div class="footer-ayah"><span class="footer-arabic" lang="ar">وَقُل رَّبِّ زِدْنِي عِلْمًا</span><span class="footer-ref">Surah Ta-Ha · 20:114</span></div>
+      </div>
+      <div class="container footer-bottom"><p>© Quran and Sunnah Society of Seychelles · All rights reserved</p></div>
+    </footer>
+    <script>
+      function submitContactForm(){const name=document.getElementById("cf-name").value.trim();const email=document.getElementById("cf-email").value.trim();const message=document.getElementById("cf-message").value.trim();if(!name||!email||!message){alert("Please fill in your name, email, and message before sending.");return}const subject=document.getElementById("cf-subject").value.trim()||"Website Enquiry";const phone=document.getElementById("cf-phone").value.trim();const body=`Name: ${name}\nPhone: ${phone||"N/A"}\nEmail: ${email}\n\n${message}`;window.location.href=`mailto:qssofsey@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;document.getElementById("contact-form").style.display="none";document.getElementById("form-success").style.display="block"}
+    </script>
+  </body>
+</html>

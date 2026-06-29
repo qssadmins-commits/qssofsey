@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quran and Sunnah Society – Seychelles</title>
+    <meta name="description" content="The Quran and Sunnah Society of Seychelles — Daily prayers, Islamic education, and community service in Mont Fleuri, Mahé." />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="js/theme.js"></script>
+    <script type="module" src="js/components/nav.js"></script>
+    <script type="module">
+      import { db } from "./js/firebase-config.js";
+      import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+      const LAT = -4.6211, LON = 55.4274, FAJR_ANGLE = 18, ISHA_ANGLE = 17, TZ_OFFSET = 4;
+      function toRad(d){return d*Math.PI/180}function toDeg(r){return r*180/Math.PI}
+      function calcPrayerTimes(date){
+        const Y=date.getUTCFullYear(),M=date.getUTCMonth()+1,D=date.getUTCDate();
+        const a=Math.floor((14-M)/12),y=Y+4800-a,m=M+12*a-3;
+        const JDN=D+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400)-32045;
+        const d=JDN-0.5-2451545.0;
+        const Msun=(357.529+0.98560028*d)%360,L0=(280.459+0.98564736*d)%360;
+        const lam=L0+1.915*Math.sin(toRad(Msun))+0.02*Math.sin(toRad(2*Msun));
+        const eps=23.439-0.00000036*d;
+        let RA=toDeg(Math.atan2(Math.cos(toRad(eps))*Math.sin(toRad(lam)),Math.cos(toRad(lam))))/15;
+        RA=((RA%24)+24)%24;
+        let eqT=L0/15-RA;eqT=eqT-24*Math.floor(eqT/24);if(eqT>12)eqT-=24;
+        const dec=toDeg(Math.asin(Math.sin(toRad(eps))*Math.sin(toRad(lam))));
+        const noon=12+TZ_OFFSET-LON/15-eqT;
+        function hourAngle(angle){const cosH=(Math.sin(toRad(-angle))-Math.sin(toRad(LAT))*Math.sin(toRad(dec)))/(Math.cos(toRad(LAT))*Math.cos(toRad(dec)));if(cosH<-1||cosH>1)return null;return toDeg(Math.acos(cosH))/15}
+        const asrAlt=toDeg(Math.atan(1.0/(1+Math.tan(toRad(Math.abs(LAT-dec))))));
+        const cosHasr=Math.max(-1,Math.min(1,(Math.sin(toRad(asrAlt))-Math.sin(toRad(LAT))*Math.sin(toRad(dec)))/(Math.cos(toRad(LAT))*Math.cos(toRad(dec)))));
+        const asrH=toDeg(Math.acos(cosHasr))/15;
+        const fajrH=hourAngle(FAJR_ANGLE),ishaH=hourAngle(ISHA_ANGLE),sunriseH=hourAngle(0.833);
+        function fmt(h){if(h==null||isNaN(h))return"--:--";h=((h%24)+24)%24;let hr=Math.floor(h);let min=Math.round((h-hr)*60);if(min===60){hr+=1;min=0}const hh=hr%12===0?12:hr%12;const mm=String(min).padStart(2,"0");const ampm=hr<12?"AM":"PM";return`${hh}:${mm} ${ampm}`}
+        return{fajr:fmt(noon-(fajrH!==null?fajrH:1.5)),sunrise:fmt(noon-(sunriseH!==null?sunriseH:0.1)),dhuhr:fmt(noon),asr:fmt(noon+asrH),maghrib:fmt(noon+(sunriseH!==null?sunriseH:0.1)),isha:fmt(noon+(ishaH!==null?ishaH:1.3))};
+      }
+
+      const remindersDataset=[{arabic:"يَرْفَعِ اللَّهُ الَّذِينَ آمَنُوا مِنكُمْ وَالَّذِينَ أُوتُوا الْعِلْمَ دَرَجَاتٍ",translation:"Allah will exalt in degree those of you who believe, and those who have been granted knowledge.",source:"Surah Al-Mujadila · 58:11"},{arabic:"مَنْ سَلَكَ طَرِيقًا يَلْتَمِسُ فِيهِ عِلْمًا سَهَّلَ اللَّهُ لَهُ بِهِ طَرِيقًا إِلَى الْجَنَّةِ",translation:"Whoever takes a path upon which he seeks knowledge, Allah will make the path to Paradise easy for him.",source:"Sahih Muslim · Hadith 2699"},{arabic:"وَقُل رَّبِّ زِدْنِي عِلْمًا",translation:"And say, 'My Lord, increase me in knowledge.'",source:"Surah Ta-Ha · 20:114"},{arabic:"إِنَّمَا بُعِثْتُ لِأُتَمِّمَ صَالِحَ الْأَخْلَاقِ",translation:"I was only sent to perfect good character.",source:"Musnad Ahmad · Hadith 8729"},{arabic:"فَاسْتَقِمْ كَمَا أُمِرْتَ وَمَن تَابَ مَعَكَ",translation:"So remain steadfast as you have been commanded, and those who have turned back with you.",source:"Surah Hud · 11:112"}];
+      let currentReminder=0;
+      function showReminder(index){currentReminder=((index%remindersDataset.length)+remindersDataset.length)%remindersDataset.length;const item=remindersDataset[currentReminder];const box=document.querySelector(".reminder-box");if(!box)return;box.style.opacity="0";box.style.transform="translateY(8px)";setTimeout(()=>{document.getElementById("reminder-text-ar").textContent=item.arabic;document.getElementById("reminder-text-en").textContent=`"${item.translation}"`;document.getElementById("reminder-text-src").textContent=item.source;document.querySelectorAll(".reminder-dot").forEach((d,i)=>d.classList.toggle("active",i===currentReminder));box.style.opacity="1";box.style.transform="translateY(0)"},250)}
+      function renderReminders(){const dayOfYear=new Date().getDate()+new Date().getMonth()*31;currentReminder=dayOfYear%remindersDataset.length;const nav=document.getElementById("reminder-nav");if(nav){nav.innerHTML=remindersDataset.map((_,i)=>`<button class="reminder-dot ${i===currentReminder?"active":""}" onclick="window.showReminderDot(${i})" aria-label="Reminder ${i+1}"></button>`).join("")}showReminder(currentReminder);setInterval(()=>showReminder(currentReminder+1),12000)}
+      window.showReminderDot=function(i){showReminder(i)};
+      function getHijriDate(){try{return new Intl.DateTimeFormat("en-TN-u-ca-islamic",{day:"numeric",month:"long",year:"numeric"}).format(new Date())}catch(e){return""}}
+      function convertToMinutes(timeStr){if(!timeStr||timeStr==="--:--")return 0;const[time,modifier]=timeStr.split(" ");let[hours,minutes]=time.split(":");hours=parseInt(hours,10);minutes=parseInt(minutes,10);if(modifier==="PM"&&hours<12)hours+=12;if(modifier==="AM"&&hours===12)hours=0;return hours*60+minutes}
+      function runPrayerEngine(prayersList){const updateClock=()=>{const now=new Date();const currentMinutes=now.getHours()*60+now.getMinutes();document.getElementById("prayer-date").textContent=now.toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});const hijri=document.getElementById("hijri-date");if(hijri)hijri.textContent=getHijriDate();let nextPrayer=null;let minDiff=Infinity;prayersList.forEach(p=>{if(p.key==="sunrise")return;const pMins=convertToMinutes(p.time);let diff=pMins-currentMinutes;if(diff<=0)diff+=1440;if(diff<minDiff){minDiff=diff;nextPrayer=p}});if(nextPrayer){const pName=document.getElementById("countdown-prayer-name");if(pName)pName.textContent=nextPrayer.en;document.getElementById("next-prayer-label").textContent="remaining until prayer";document.querySelectorAll(".prayer-card").forEach(c=>c.classList.remove("active-prayer"));const activeCard=document.getElementById(`card-node-${nextPrayer.key}`);if(activeCard)activeCard.classList.add("active-prayer");let remSecs=minDiff*60-now.getSeconds();if(remSecs<0)remSecs=0;const h=Math.floor(remSecs/3600).toString().padStart(2,"0");const m=Math.floor((remSecs%3600)/60).toString().padStart(2,"0");const s=Math.floor(remSecs%60).toString().padStart(2,"0");document.getElementById("next-prayer-countdown").textContent=`${h}:${m}:${s}`}};updateClock();setInterval(updateClock,1000)}
+
+      document.addEventListener("DOMContentLoaded",()=>{
+        renderReminders();
+        const today=new Date();const mwl=calcPrayerTimes(today);
+        const calculatedList=[{key:"fajr",en:"Fajr",ar:"الفجر",time:mwl.fajr},{key:"sunrise",en:"Sunrise",ar:"الشروق",time:mwl.sunrise},{key:"dhuhr",en:"Dhuhr",ar:"الظهر",time:mwl.dhuhr},{key:"asr",en:"Asr",ar:"العصر",time:mwl.asr},{key:"maghrib",en:"Maghrib",ar:"المغرب",time:mwl.maghrib},{key:"isha",en:"Isha",ar:"العشاء",time:mwl.isha}];
+        document.getElementById("prayer-grid-container").innerHTML=calculatedList.map(p=>`<div class="prayer-card" id="card-node-${p.key}"><div class="prayer-ar">${p.ar}</div><div class="prayer-en">${p.en}</div><div class="prayer-time">${p.time||"--:--"}</div></div>`).join("");
+        const jumuahEl=document.getElementById("jumuah-time");if(jumuahEl)jumuahEl.textContent=mwl.dhuhr;
+        runPrayerEngine(calculatedList);
+        onSnapshot(doc(db,"site","config"),snap=>{if(!snap.exists())return;const data=snap.data();const banner=document.getElementById("announcement-banner");if(data.announcement&&banner){document.getElementById("announcement-text").textContent=data.announcement;banner.classList.add("has-content")}});
+        const io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");io.unobserve(e.target)}})},{threshold:0.06});
+        document.querySelectorAll(".reveal").forEach(el=>io.observe(el));
+      });
+    </script>
+  </head>
+  <body class="geo-pattern">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <nav aria-label="Main navigation">
+      <a href="index.html" class="nav-logo" aria-label="QSS Seychelles – home">
+        <img src="qss_logo.png" alt="" aria-hidden="true" width="42" height="42" />
+        <div class="nav-logo-text">Quran &amp; Sunnah Society<span>Seychelles</span></div>
+      </a>
+      <ul class="nav-links" id="nav-links" role="list">
+        <li><a href="index.html" class="active" aria-current="page">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="events.html">Events &amp; Classes</a></li>
+        <li><a href="gallery.html">Gallery</a></li>
+        <li><a href="donate.html">Donate</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li><a href="admin.html" class="nav-admin">Dashboard</a></li>
+      </ul>
+      <div class="nav-right">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Switch to light mode" title="Switch to light mode">☀️</button>
+        <button class="nav-toggle" id="nav-toggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="nav-links"><span></span><span></span><span></span></button>
+      </div>
+    </nav>
+
+    <section class="hero-showcase" aria-label="Welcome">
+      <svg id="hero-canvas" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs><style>.geo-line{stroke:#b8923a;stroke-width:0.6;fill:none}@keyframes geoRotate{from{transform-origin:400px 300px;transform:rotate(0deg)}to{transform-origin:400px 300px;transform:rotate(360deg)}}@keyframes geoPulse{0%,100%{opacity:0.6}50%{opacity:1}}@media (prefers-reduced-motion:no-preference){.ring1{animation:geoRotate 80s linear infinite}.ring2{animation:geoRotate 120s linear infinite reverse}.pulse{animation:geoPulse 4s ease-in-out infinite}}</style></defs>
+        <g class="geo-line" opacity="0.5"><polygon points="400,20 700,175 700,425 400,580 100,425 100,175"/><polygon points="400,80 640,205 640,395 400,520 160,395 160,205"/><line x1="400" y1="20" x2="400" y2="80"/><line x1="700" y1="175" x2="640" y2="205"/><line x1="700" y1="425" x2="640" y2="395"/><line x1="400" y1="580" x2="400" y2="520"/><line x1="100" y1="425" x2="160" y2="395"/><line x1="100" y1="175" x2="160" y2="205"/></g>
+        <g class="ring1 geo-line" opacity="0.35"><polygon points="400,140 530,210 530,350 400,420 270,350 270,210"/><polygon points="400,170 510,230 510,320 400,390 290,320 290,230"/></g>
+        <g class="ring2 geo-line" opacity="0.25"><polygon points="400,190 490,240 490,310 400,360 310,310 310,240"/></g>
+        <g class="geo-line pulse" opacity="0.3"><polygon points="50,50 130,90 130,170 50,210 -30,170 -30,90"/><polygon points="750,50 830,90 830,170 750,210 670,170 670,90"/><polygon points="50,450 130,490 130,570 50,610 -30,570 -30,490"/><polygon points="750,450 830,490 830,570 750,610 670,570 670,490"/></g>
+      </svg>
+      <div class="hero-glow" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="hero-bismillah" aria-label="Bismillah">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
+        <div class="hero-eyebrow">Mont Fleuri · Mahé · Seychelles</div>
+        <h1>Quran and Sunnah Society</h1>
+        <div class="hero-rule" aria-hidden="true"><span class="hero-rule-line"></span><span class="hero-rule-glyph">◆</span><span class="hero-rule-line"></span></div>
+        <p class="hero-tagline">Authentic Knowledge · Congregational Prayer · Community Service</p>
+        <div class="hero-actions">
+          <a href="events.html" class="btn-hero-primary">Events &amp; Classes</a>
+          <a href="donate.html" class="btn-hero-outline">Support the Masjid</a>
+        </div>
+      </div>
+      <div class="hero-scroll" aria-hidden="true"><div class="hero-scroll-line"></div><span>Scroll</span></div>
+    </section>
+
+    <div class="quicklinks-strip" role="navigation" aria-label="Quick links">
+      <div class="container quicklinks-inner">
+        <a href="events.html" class="quicklink-item"><span class="quicklink-icon" aria-hidden="true">🗓️</span><span>Upcoming Events</span></a>
+        <a href="events.html#classes" class="quicklink-item"><span class="quicklink-icon" aria-hidden="true">📖</span><span>Weekly Classes</span></a>
+        <a href="contact.html" class="quicklink-item"><span class="quicklink-icon" aria-hidden="true">💬</span><span>WhatsApp Channel</span></a>
+        <a href="donate.html" class="quicklink-item"><span class="quicklink-icon" aria-hidden="true">🤲</span><span>Give Sadaqah</span></a>
+      </div>
+    </div>
+
+    <main id="main-content" class="container page-wrapper-home">
+      <div id="announcement-banner" class="announcement-banner reveal" role="alert" aria-live="polite">
+        <div class="announcement-icon" aria-hidden="true">📢</div>
+        <div class="announcement-text"><div class="announcement-label">Announcement</div><div class="announcement-body" id="announcement-text"></div></div>
+      </div>
+      <section class="prayer-showcase reveal" aria-labelledby="prayer-heading">
+        <span class="eyebrow" style="text-align:center;display:block">Congregational Timings</span>
+        <h2 class="section-title" id="prayer-heading">Daily Prayer Times</h2>
+        <div class="section-rule" aria-hidden="true"><span class="section-rule-line"></span><span class="section-rule-glyph">◆</span><span class="section-rule-line"></span></div>
+        <p id="prayer-date" class="prayer-date-label" aria-live="polite"></p>
+        <span id="hijri-date" class="hijri-date-label" aria-live="polite"></span>
+        <div class="countdown-wrap" role="timer" aria-live="polite" aria-label="Time until next prayer">
+          <div class="countdown-next-prayer">Next Prayer</div>
+          <div class="countdown-prayer-name" id="countdown-prayer-name">—</div>
+          <div id="next-prayer-countdown">--:--:--</div>
+          <div id="next-prayer-label">Calculating prayer times…</div>
+        </div>
+        <div id="prayer-grid-container" class="prayer-grid" role="list" aria-label="Daily prayer times"></div>
+        <p class="prayer-note">✦ Iqamah is observed 10-15 minutes after the Adhan · Times calculated via Muslim World League method</p>
+        <div class="jumuah-grid">
+          <div class="jumuah-card">
+            <div class="jumuah-badge" aria-hidden="true">🕌</div>
+            <div>
+              <h3 class="jumuah-title">Jumu'ah Congregation</h3>
+              <div id="jumuah-time" class="jumuah-time-val">—</div>
+              <p class="jumuah-desc">Weekly Friday Khutbah followed by congregational prayer. Jumu'ah time corresponds to Dhuhr, delivered in accordance with authentic prophetic teachings.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <div class="section-divider" aria-hidden="true"><span class="section-divider-line"></span><span class="section-divider-arabic">﷽</span><span class="section-divider-line"></span></div>
+      <section class="reminders-section reveal" aria-labelledby="reminders-heading">
+        <span class="eyebrow" style="text-align:center;display:block">Daily Wisdom</span>
+        <h2 class="section-title" id="reminders-heading">Prophetic Reminder</h2>
+        <div class="section-rule" aria-hidden="true"><span class="section-rule-line"></span><span class="section-rule-glyph">◆</span><span class="section-rule-line"></span></div>
+        <div class="reminder-box" aria-live="polite">
+          <div id="reminder-text-ar" class="reminder-ar-text"></div>
+          <div id="reminder-text-en" class="reminder-en-text"></div>
+          <div id="reminder-text-src" class="reminder-reference"></div>
+          <div class="reminder-nav" id="reminder-nav" role="tablist" aria-label="Reminder navigation"></div>
+        </div>
+      </section>
+      <section class="about-strip reveal" aria-labelledby="about-heading">
+        <div class="about-strip-inner">
+          <div class="about-strip-text">
+            <span class="eyebrow">Our Mission</span>
+            <h2 class="about-strip-title" id="about-heading">Quran &amp; Sunnah Society</h2>
+            <p class="about-strip-desc">A community organisation dedicated to the propagation of authentic Islamic knowledge based purely upon the Book of Allah and the authentic Sunnah of the Prophet Muhammad ﷺ. We operate the local Masjid in Mont Fleuri, offering daily congregational prayers, educational programmes, and community support across Mahé.</p>
+            <a href="about.html" class="btn-primary">Learn More About Us</a>
+          </div>
+          <div class="about-strip-stats" aria-label="Key statistics">
+            <div class="stat-block"><div class="stat-num">5+</div><div class="stat-label">Daily Congregations</div></div>
+            <div class="stat-block"><div class="stat-num">All Ages</div><div class="stat-label">Educational Programs</div></div>
+            <div class="stat-block"><div class="stat-num">Open</div><div class="stat-label">Community Support</div></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="geo-band" aria-hidden="true"></div>
+    <footer class="site-footer" aria-label="Site footer">
+      <div class="container footer-inner">
+        <div class="footer-brand"><div class="footer-logo-text">Quran and Sunnah Society</div><div class="footer-location">Mont Fleuri, Mahe, Seychelles</div></div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="index.html">Home</a><a href="about.html">About</a><a href="events.html">Events</a><a href="gallery.html">Gallery</a><a href="donate.html">Donate</a><a href="contact.html">Contact</a>
+        </nav>
+        <div class="footer-ayah"><span class="footer-arabic" lang="ar">وَقُل رَّبِّ زِدْنِي عِلْمًا</span><span class="footer-ref">Surah Ta-Ha · 20:114</span></div>
+      </div>
+      <div class="container footer-bottom"><p>© Quran and Sunnah Society of Seychelles · All rights reserved</p></div>
+    </footer>
+  </body>
+</html>

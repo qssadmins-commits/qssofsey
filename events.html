@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Events &amp; Classes — QSS Seychelles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="js/theme.js"></script>
+    <script type="module" src="js/components/nav.js"></script>
+    <script type="module">
+      import { db } from "./js/firebase-config.js";
+      import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+      document.addEventListener("DOMContentLoaded",()=>{
+        onSnapshot(query(collection(db,"events"),orderBy("createdAt","desc")),snap=>{
+          const container=document.getElementById("events-grid-container");
+          if(snap.empty){container.innerHTML='<p style="text-align:center;color:var(--text-muted);grid-column:1/-1;padding:3rem 0;font-style:italic;">No scheduled events listed at this time.</p>';return}
+          container.innerHTML=snap.docs.map(doc=>{const d=doc.data();return`<article class="event-card"><div class="event-header-date"><div class="event-day">${d.day||""}</div><div class="event-month">${d.month||""}</div></div><div class="event-body"><h3 class="event-title">${d.title||""}</h3><div class="event-meta">⏰ ${d.time||"TBD"}</div><p class="event-desc">${d.desc||""}</p></div></article>`}).join("")});
+        onSnapshot(query(collection(db,"classes"),orderBy("createdAt","desc")),snap=>{
+          const container=document.getElementById("classes-grid-container");
+          if(snap.empty){container.innerHTML='<p style="text-align:center;color:var(--text-muted);grid-column:1/-1;padding:3rem 0;font-style:italic;">No classes registered at this time.</p>';return}
+          container.innerHTML=snap.docs.map(doc=>{const d=doc.data();return`<article class="class-card"><div class="class-body"><h3 class="class-title">${d.title||""}</h3><div class="class-meta">🗓️ ${d.meta||""}</div><p class="class-desc">${d.desc||""}</p></div></article>`}).join("")});
+      });
+    </script>
+  </head>
+  <body class="geo-pattern">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <nav aria-label="Main navigation">
+      <a href="index.html" class="nav-logo" aria-label="QSS Seychelles – home"><img src="qss_logo.png" alt="" aria-hidden="true" width="42" height="42" /><div class="nav-logo-text">Quran &amp; Sunnah Society<span>Seychelles</span></div></a>
+      <ul class="nav-links" id="nav-links" role="list">
+        <li><a href="index.html">Home</a></li><li><a href="about.html">About</a></li>
+        <li><a href="events.html" class="active" aria-current="page">Events &amp; Classes</a></li>
+        <li><a href="gallery.html">Gallery</a></li><li><a href="donate.html">Donate</a></li><li><a href="contact.html">Contact</a></li>
+        <li><a href="admin.html" class="nav-admin">Dashboard</a></li>
+      </ul>
+      <div class="nav-right">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Switch to light mode" title="Switch to light mode">☀️</button>
+        <button class="nav-toggle" id="nav-toggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="nav-links"><span></span><span></span><span></span></button>
+      </div>
+    </nav>
+    <main id="main-content" class="container page-wrapper">
+      <div class="bismillah-header" lang="ar" aria-label="In the name of Allah">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
+      <section aria-labelledby="events-heading">
+        <span class="eyebrow" style="text-align:center;display:block">Timetables</span>
+        <h1 class="section-title" id="events-heading">Upcoming Gatherings</h1>
+        <div class="section-rule" aria-hidden="true"><span class="section-rule-line"></span><span class="section-rule-glyph">◆</span><span class="section-rule-line"></span></div>
+        <div id="events-grid-container" class="events-grid" aria-live="polite" aria-label="Events list"></div>
+      </section>
+      <section style="margin-top:5rem" id="classes" aria-labelledby="classes-heading">
+        <span class="eyebrow" style="text-align:center;display:block">Knowledge Streams</span>
+        <h2 class="section-title" id="classes-heading">Educational Classes</h2>
+        <div class="section-rule" aria-hidden="true"><span class="section-rule-line"></span><span class="section-rule-glyph">◆</span><span class="section-rule-line"></span></div>
+        <div id="classes-grid-container" class="classes-grid" aria-live="polite" aria-label="Classes list"></div>
+      </section>
+    </main>
+    <div class="geo-band" aria-hidden="true"></div>
+    <footer class="site-footer" aria-label="Site footer">
+      <div class="container footer-inner">
+        <div class="footer-brand"><div class="footer-logo-text">Quran and Sunnah Society</div><div class="footer-location">Mont Fleuri, Mahe, Seychelles</div></div>
+        <nav class="footer-links" aria-label="Footer navigation"><a href="index.html">Home</a><a href="about.html">About</a><a href="events.html">Events</a><a href="gallery.html">Gallery</a><a href="donate.html">Donate</a><a href="contact.html">Contact</a></nav>
+        <div class="footer-ayah"><span class="footer-arabic" lang="ar">وَقُل رَّبِّ زِدْنِي عِلْمًا</span><span class="footer-ref">Surah Ta-Ha · 20:114</span></div>
+      </div>
+      <div class="container footer-bottom"><p>© Quran and Sunnah Society of Seychelles · All rights reserved</p></div>
+    </footer>
+  </body>
+</html>
