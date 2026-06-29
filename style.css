@@ -254,6 +254,16 @@ nav {
   justify-content: center;
 }
 
+/* Mobile: hidden by default — shown via .open class */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+  }
+  .nav-links.open {
+    display: flex;
+  }
+}
+
 .nav-right {
   grid-area: right;
   display: flex;
@@ -2320,9 +2330,8 @@ textarea { min-height: 100px; resize: vertical; }
     justify-content: center;
   }
 
-  /* Full-screen overlay with smooth fade */
+  /* Full-screen overlay */
   .nav-links {
-    display: flex !important;
     position: fixed;
     top: var(--nav-h);
     left: 0;
@@ -2338,16 +2347,6 @@ textarea { min-height: 100px; resize: vertical; }
     gap: 0.25rem;
     z-index: 998;
     overflow-y: auto;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-12px);
-    transition: opacity 0.22s ease, transform 0.22s ease;
-  }
-
-  .nav-links.open {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
   }
 
   .nav-links li { width: 100%; }
