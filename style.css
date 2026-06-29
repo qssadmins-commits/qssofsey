@@ -254,10 +254,26 @@ nav {
   justify-content: center;
 }
 
-/* Mobile: hidden by default — shown via .open class */
+/* Mobile: hidden by default, full-screen overlay when .open */
 @media (max-width: 768px) {
   .nav-links {
     display: none;
+    position: fixed;
+    top: var(--nav-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    flex-direction: column;
+    background: var(--nav-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    -webkit-overflow-scrolling: touch;
+    padding: 1.5rem 1.25rem 2rem;
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+    gap: 0.25rem;
+    z-index: 998;
+    overflow-y: auto;
+    list-style: none;
   }
   .nav-links.open {
     display: flex;
@@ -2330,24 +2346,7 @@ textarea { min-height: 100px; resize: vertical; }
     justify-content: center;
   }
 
-  /* Full-screen overlay */
-  .nav-links {
-    position: fixed;
-    top: var(--nav-h);
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--nav-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    -webkit-overflow-scrolling: touch;
-    flex-direction: column;
-    padding: 1.5rem 1.25rem 2rem;
-    padding-bottom: max(2rem, env(safe-area-inset-bottom));
-    gap: 0.25rem;
-    z-index: 998;
-    overflow-y: auto;
-  }
+  /* Full-screen overlay — display controlled by the earlier block */
 
   .nav-links li { width: 100%; }
 
