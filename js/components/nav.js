@@ -39,7 +39,9 @@ function initNav() {
   });
 
   window.addEventListener("resize", () => {
-    if (window.innerWidth > 768) document.body.style.overflow = "";
+    if (window.innerWidth > 768 && links.classList.contains("open")) {
+      closeNav();
+    }
   });
 }
 
