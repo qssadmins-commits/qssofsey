@@ -12,15 +12,18 @@
     <script type="module">
       import { db } from "./js/firebase-config.js";
       import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+      function escapeHTML(str){return String(str==null?"":str).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
       document.addEventListener("DOMContentLoaded",()=>{
         onSnapshot(query(collection(db,"events"),orderBy("createdAt","desc")),snap=>{
           const container=document.getElementById("events-grid-container");
           if(snap.empty){container.innerHTML='<p style="text-align:center;color:var(--text-muted);grid-column:1/-1;padding:3rem 0;font-style:italic;">No scheduled events listed at this time.</p>';return}
-          container.innerHTML=snap.docs.map(doc=>{const d=doc.data();return`<article class="event-card"><div class="event-header-date"><div class="event-day">${d.day||""}</div><div class="event-month">${d.month||""}</div></div><div class="event-body"><h3 class="event-title">${d.title||""}</h3><div class="event-meta">⏰ ${d.time||"TBD"}</div><p class="event-desc">${d.desc||""}</p></div></article>`}).join("")});
+          container.innerHTML=snap.docs.map(doc=>{const d=doc.data();return`<article class="event-card"><div class="event-header-date"><div class="event-day">${escapeHTML(d.day)}</div><div class="event-month">${escapeHTML(d.month)}</div></div><div class="event-body"><h3 class="event-title">${escapeHTML(d.title)}</h3><div class="event-meta">⏰ ${escapeHTML(d.time||"TBD")}</div><p class="event-desc">${escapeHTML(d.desc)}</p></div></article>`}).join("")});
         onSnapshot(query(collection(db,"classes"),orderBy("createdAt","desc")),snap=>{
           const container=document.getElementById("classes-grid-container");
           if(snap.empty){container.innerHTML='<p style="text-align:center;color:var(--text-muted);grid-column:1/-1;padding:3rem 0;font-style:italic;">No classes registered at this time.</p>';return}
-          container.innerHTML=snap.docs.map(doc=>{const d=doc.data();return`<article class="class-card"><div class="class-body"><h3 class="class-title">${d.title||""}</h3><div class="class-meta">🗓️ ${d.meta||""}</div><p class="class-desc">${d.desc||""}</p></div></article>`}).join("")});
+          container.innerHTML=snap.docs.map(doc=>{const d=doc.data();return`<article class="class-card"><div class="class-body"><h3 class="class-title">${escapeHTML(d.title)}</h3><div class="class-meta">🗓️ ${escapeHTML(d.meta)}</div><p class="class-desc">${escapeHTML(d.desc)}</p></div></article>`}).join("")});
       });
     </script>
   </head>

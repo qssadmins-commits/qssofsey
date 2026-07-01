@@ -10,30 +10,62 @@
     <script src="js/components/theme.js"></script>
     <script type="module" src="js/components/nav.js"></script>
     <script type="module">
-      import { db, storage } from "./js/firebase-config.js";
-      import { doc, getDoc, setDoc, collection, addDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+      import { db, storage, auth } from "./js/firebase-config.js";
+      import { doc, setDoc, collection, addDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
       import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
-      let selectedFile=null;
-      window.handleAdminLogin=async function(){const pin=document.getElementById("admin-passcode").value.trim();try{const snap=await getDoc(doc(db,"site","config"));const stored=snap.exists()?snap.data().adminPin:"qss2026";if(pin===stored){document.getElementById("admin-auth-pane").style.display="none";document.getElementById("admin-dashboard-pane").style.display="block";setupListeners()}else{alert("Invalid passcode.")}}catch(e){alert("Error verifying passcode.")}};
-      function setupListeners(){
-        onSnapshot(doc(db,"site","prayers"),snap=>{if(snap.exists()&&snap.data().list){snap.data().list.forEach(p=>{const el=document.getElementById(`inp-${p.key}`);if(el)el.value=p.time});const jumuah=snap.data().jumuah;if(jumuah)document.getElementById("inp-jumuah").value=jumuah}});
-        onSnapshot(query(collection(db,"events"),orderBy("createdAt","asc")),snap=>{const c=document.getElementById("admin-events-list");if(!c)return;c.innerHTML=snap.docs.map(d=>`<div class="admin-list-item"><span><strong>${d.data().title}</strong> — ${d.data().day} ${d.data().month}</span><button onclick="deleteItem('events','${d.id}')" class="admin-remove-btn" aria-label="Remove ${d.data().title}">Remove</button></div>`).join("")||'<p class="admin-empty">No events added yet.</p>'});
-        onSnapshot(query(collection(db,"classes"),orderBy("createdAt","asc")),snap=>{const c=document.getElementById("admin-classes-list");if(!c)return;c.innerHTML=snap.docs.map(d=>`<div class="admin-list-item"><span><strong>${d.data().title}</strong></span><button onclick="deleteItem('classes','${d.id}')" class="admin-remove-btn" aria-label="Remove ${d.data().title}">Remove</button></div>`).join("")||'<p class="admin-empty">No classes registered yet.</p>'});
-        onSnapshot(query(collection(db,"gallery"),orderBy("createdAt","desc")),snap=>{const c=document.getElementById("admin-gallery-list");if(!c)return;if(snap.empty){c.innerHTML='<p class="admin-empty">No photos uploaded yet.</p>';return}c.innerHTML=snap.docs.map(d=>`<div class="admin-list-item"><div style="display:flex;align-items:center;gap:0.85rem;flex:1;min-width:0;">${d.data().url?`<img src="${d.data().url}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;" onerror="this.style.display='none'" alt="" />`:`<div style="width:48px;height:48px;background:var(--bg-mid);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;" aria-hidden="true">🖼️</div>`}<div style="min-width:0;"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.9rem;color:var(--text-primary);">${d.data().caption||"Untitled"}</div><div style="color:var(--text-muted);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.06em;">${d.data().category||"uncategorised"}</div></div></div><button onclick="deleteItem('gallery','${d.id}','${d.data().storagePath||""}')" class="admin-remove-btn" aria-label="Remove photo ${d.data().caption||""}">Remove</button></div>`).join("")});
+      import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+      function escapeHTML(str) { return String(str == null ? "" : str).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])) }
+
+      let selectedFile = null;
+      let listenersActive = false;
+
+      onAuthStateChanged(auth, user => {
+        const authPane = document.getElementById("admin-auth-pane");
+        const dashPane = document.getElementById("admin-dashboard-pane");
+        if (user) {
+          authPane.style.display = "none";
+          dashPane.style.display = "block";
+          if (!listenersActive) { setupListeners(); listenersActive = true; }
+        } else {
+          authPane.style.display = "block";
+          dashPane.style.display = "none";
+        }
+      });
+
+      window.handleAdminLogin = async function () {
+        const email = document.getElementById("admin-email").value.trim();
+        const pass = document.getElementById("admin-passcode").value;
+        if (!email || !pass) return alert("Please enter both email and password.");
+        try {
+          await signInWithEmailAndPassword(auth, email, pass);
+        } catch (e) {
+          alert("Invalid credentials.");
+        }
+      };
+
+      window.handleAdminLogout = function () { signOut(auth); };
+
+      function setupListeners() {
+        onSnapshot(doc(db, "site", "prayers"), snap => { if (snap.exists() && snap.data().list) { snap.data().list.forEach(p => { const el = document.getElementById(`inp-${p.key}`); if (el) el.value = p.time }); const jumuah = snap.data().jumuah; if (jumuah) document.getElementById("inp-jumuah").value = jumuah } });
+        onSnapshot(query(collection(db, "events"), orderBy("createdAt", "asc")), snap => { const c = document.getElementById("admin-events-list"); if (!c) return; c.innerHTML = snap.docs.map(d => `<div class="admin-list-item"><span><strong>${escapeHTML(d.data().title)}</strong> — ${escapeHTML(d.data().day)} ${escapeHTML(d.data().month)}</span><button onclick="deleteItem('events','${d.id}')" class="admin-remove-btn" aria-label="Remove ${escapeHTML(d.data().title)}">Remove</button></div>`).join("") || '<p class="admin-empty">No events added yet.</p>' });
+        onSnapshot(query(collection(db, "classes"), orderBy("createdAt", "asc")), snap => { const c = document.getElementById("admin-classes-list"); if (!c) return; c.innerHTML = snap.docs.map(d => `<div class="admin-list-item"><span><strong>${escapeHTML(d.data().title)}</strong></span><button onclick="deleteItem('classes','${d.id}')" class="admin-remove-btn" aria-label="Remove ${escapeHTML(d.data().title)}">Remove</button></div>`).join("") || '<p class="admin-empty">No classes registered yet.</p>' });
+        onSnapshot(query(collection(db, "gallery"), orderBy("createdAt", "desc")), snap => { const c = document.getElementById("admin-gallery-list"); if (!c) return; if (snap.empty) { c.innerHTML = '<p class="admin-empty">No photos uploaded yet.</p>'; return } c.innerHTML = snap.docs.map(d => `<div class="admin-list-item"><div style="display:flex;align-items:center;gap:0.85rem;flex:1;min-width:0;">${d.data().url ? `<img src="${escapeHTML(d.data().url)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;" onerror="this.style.display='none'" alt="" />` : `<div style="width:48px;height:48px;background:var(--bg-mid);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;" aria-hidden="true">🖼️</div>`}<div style="min-width:0;"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.9rem;color:var(--text-primary);">${escapeHTML(d.data().caption || "Untitled")}</div><div style="color:var(--text-muted);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.06em;">${escapeHTML(d.data().category || "uncategorised")}</div></div></div><button onclick="deleteItem('gallery','${d.id}','${d.data().storagePath || ""}')" class="admin-remove-btn" aria-label="Remove photo ${escapeHTML(d.data().caption || "")}">Remove</button></div>`).join("") });
       }
-      window.onGalleryFileChange=function(input){const file=input.files[0];if(!file)return;selectedFile=file;const preview=document.getElementById("gal-preview");const reader=new FileReader();reader.onload=e=>{document.getElementById("gal-preview-img").src=e.target.result;document.getElementById("gal-preview-name").textContent=file.name;preview.style.display="flex"};reader.readAsDataURL(file)};
-      window.uploadGalleryPhoto=async function(){if(!selectedFile)return alert("Please choose a photo first.");const caption=document.getElementById("gal-caption").value.trim();const category=document.getElementById("gal-category").value;const fileName=`gallery/${Date.now()}_${selectedFile.name.replace(/\s+/g,"_")}`;const storageRef=ref(storage,fileName);const uploadTask=uploadBytesResumable(storageRef,selectedFile);const progressWrap=document.getElementById("gal-progress-wrap");const progressFill=document.getElementById("gal-progress-fill");const progressLabel=document.getElementById("gal-progress-label");const uploadBtn=document.getElementById("gal-upload-btn");progressWrap.style.display="block";uploadBtn.disabled=true;uploadBtn.textContent="Uploading…";uploadTask.on("state_changed",snapshot=>{const pct=Math.round(snapshot.bytesTransferred/snapshot.totalBytes*100);progressFill.style.width=pct+"%";progressLabel.textContent=`Uploading… ${pct}%`},error=>{alert("Upload failed: "+error.message);progressWrap.style.display="none";uploadBtn.disabled=false;uploadBtn.textContent="Upload Photo"},async()=>{const downloadURL=await getDownloadURL(uploadTask.snapshot.ref);await addDoc(collection(db,"gallery"),{url:downloadURL,storagePath:fileName,caption,category,createdAt:Date.now()});selectedFile=null;document.getElementById("gal-file-input").value="";document.getElementById("gal-caption").value="";document.getElementById("gal-category").value="masjid";document.getElementById("gal-preview").style.display="none";progressWrap.style.display="none";progressFill.style.width="0%";uploadBtn.disabled=false;uploadBtn.textContent="Upload Photo";alert("✅ Photo uploaded successfully!")})};
-      window.saveAdminPrayers=async function(){const list=[{key:"fajr",en:"Fajr",ar:"الفجر",time:document.getElementById("inp-fajr").value},{key:"sunrise",en:"Sunrise",ar:"الشروق",time:document.getElementById("inp-sunrise").value},{key:"dhuhr",en:"Dhuhr",ar:"الظهر",time:document.getElementById("inp-dhuhr").value},{key:"asr",en:"Asr",ar:"العصر",time:document.getElementById("inp-asr").value},{key:"maghrib",en:"Maghrib",ar:"المغرب",time:document.getElementById("inp-maghrib").value},{key:"isha",en:"Isha",ar:"العشاء",time:document.getElementById("inp-isha").value}];const jumuahTime=document.getElementById("inp-jumuah").value;try{await setDoc(doc(db,"site","prayers"),{list,jumuah:jumuahTime});alert("Prayer timings saved successfully!")}catch(e){alert("Error saving prayer times.")}};
-      window.addAdminEvent=async function(){const title=document.getElementById("evt-title").value.trim();const day=document.getElementById("evt-day").value.trim();const month=document.getElementById("evt-month").value.trim();const time=document.getElementById("evt-time").value.trim();const desc=document.getElementById("evt-desc").value.trim();if(!title||!day||!month)return alert("Please fill in title and date.");try{await addDoc(collection(db,"events"),{title,day,month,time,desc,createdAt:Date.now()});["evt-title","evt-day","evt-month","evt-time","evt-desc"].forEach(id=>document.getElementById(id).value="");alert("Event added successfully.")}catch(e){alert("Error adding event.")}};
-      window.addAdminClass=async function(){const title=document.getElementById("cls-title").value.trim();const meta=document.getElementById("cls-meta").value.trim();const desc=document.getElementById("cls-desc").value.trim();if(!title)return alert("Please enter a title.");try{await addDoc(collection(db,"classes"),{title,meta,desc,createdAt:Date.now()});["cls-title","cls-meta","cls-desc"].forEach(id=>document.getElementById(id).value="");alert("Class registered.")}catch(e){alert("Error registering class.")}};
-      window.deleteItem=async function(colName,id,storagePath){if(!confirm("Remove this item?"))return;try{await deleteDoc(doc(db,colName,id));if(storagePath){try{await deleteObject(ref(storage,storagePath))}catch(_){}}alert("Removed.")}catch(e){alert("Error removing item.")}};
-      window.switchAdminTab=function(tabId,btn){document.querySelectorAll(".admin-sidebar-btn").forEach(b=>b.classList.remove("active"));document.querySelectorAll(".admin-panel-section").forEach(s=>s.classList.remove("active"));btn.classList.add("active");document.getElementById(tabId).classList.add("active")};
+
+      window.onGalleryFileChange = function (input) { const file = input.files[0]; if (!file) return; selectedFile = file; const preview = document.getElementById("gal-preview"); const reader = new FileReader(); reader.onload = e => { document.getElementById("gal-preview-img").src = e.target.result; document.getElementById("gal-preview-name").textContent = file.name; preview.style.display = "flex" }; reader.readAsDataURL(file) };
+      window.uploadGalleryPhoto = async function () { if (!selectedFile) return alert("Please choose a photo first."); const caption = document.getElementById("gal-caption").value.trim(); const category = document.getElementById("gal-category").value; const fileName = `gallery/${Date.now()}_${selectedFile.name.replace(/\s+/g, "_")}`; const storageRef = ref(storage, fileName); const uploadTask = uploadBytesResumable(storageRef, selectedFile); const progressWrap = document.getElementById("gal-progress-wrap"); const progressFill = document.getElementById("gal-progress-fill"); const progressLabel = document.getElementById("gal-progress-label"); const uploadBtn = document.getElementById("gal-upload-btn"); progressWrap.style.display = "block"; uploadBtn.disabled = true; uploadBtn.textContent = "Uploading…"; uploadTask.on("state_changed", snapshot => { const pct = Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100); progressFill.style.width = pct + "%"; progressLabel.textContent = `Uploading… ${pct}%` }, error => { alert("Upload failed: " + error.message); progressWrap.style.display = "none"; uploadBtn.disabled = false; uploadBtn.textContent = "Upload Photo" }, async () => { const downloadURL = await getDownloadURL(uploadTask.snapshot.ref); await addDoc(collection(db, "gallery"), { url: downloadURL, storagePath: fileName, caption, category, createdAt: Date.now() }); selectedFile = null; document.getElementById("gal-file-input").value = ""; document.getElementById("gal-caption").value = ""; document.getElementById("gal-category").value = "masjid"; document.getElementById("gal-preview").style.display = "none"; progressWrap.style.display = "none"; progressFill.style.width = "0%"; uploadBtn.disabled = false; uploadBtn.textContent = "Upload Photo"; alert("✅ Photo uploaded successfully!") }) };
+      window.saveAdminPrayers = async function () { const list = [{ key: "fajr", en: "Fajr", ar: "الفجر", time: document.getElementById("inp-fajr").value }, { key: "sunrise", en: "Sunrise", ar: "الشروق", time: document.getElementById("inp-sunrise").value }, { key: "dhuhr", en: "Dhuhr", ar: "الظهر", time: document.getElementById("inp-dhuhr").value }, { key: "asr", en: "Asr", ar: "العصر", time: document.getElementById("inp-asr").value }, { key: "maghrib", en: "Maghrib", ar: "المغرب", time: document.getElementById("inp-maghrib").value }, { key: "isha", en: "Isha", ar: "العشاء", time: document.getElementById("inp-isha").value }]; const jumuahTime = document.getElementById("inp-jumuah").value; try { await setDoc(doc(db, "site", "prayers"), { list, jumuah: jumuahTime }); alert("Prayer timings saved successfully!") } catch (e) { alert("Error saving prayer times.") } };
+      window.addAdminEvent = async function () { const title = document.getElementById("evt-title").value.trim(); const day = document.getElementById("evt-day").value.trim(); const month = document.getElementById("evt-month").value.trim(); const time = document.getElementById("evt-time").value.trim(); const desc = document.getElementById("evt-desc").value.trim(); if (!title || !day || !month) return alert("Please fill in title and date."); try { await addDoc(collection(db, "events"), { title, day, month, time, desc, createdAt: Date.now() }); ["evt-title", "evt-day", "evt-month", "evt-time", "evt-desc"].forEach(id => document.getElementById(id).value = ""); alert("Event added successfully.") } catch (e) { alert("Error adding event.") } };
+      window.addAdminClass = async function () { const title = document.getElementById("cls-title").value.trim(); const meta = document.getElementById("cls-meta").value.trim(); const desc = document.getElementById("cls-desc").value.trim(); if (!title) return alert("Please enter a title."); try { await addDoc(collection(db, "classes"), { title, meta, desc, createdAt: Date.now() }); ["cls-title", "cls-meta", "cls-desc"].forEach(id => document.getElementById(id).value = ""); alert("Class registered.") } catch (e) { alert("Error registering class.") } };
+      window.deleteItem = async function (colName, id, storagePath) { if (!confirm("Remove this item?")) return; try { await deleteDoc(doc(db, colName, id)); if (storagePath) { try { await deleteObject(ref(storage, storagePath)) } catch (_) { } } alert("Removed.") } catch (e) { alert("Error removing item.") } };
+      window.switchAdminTab = function (tabId, btn) { document.querySelectorAll(".admin-sidebar-btn").forEach(b => b.classList.remove("active")); document.querySelectorAll(".admin-panel-section").forEach(s => s.classList.remove("active")); btn.classList.add("active"); document.getElementById(tabId).classList.add("active") };
     </script>
   </head>
   <body class="geo-pattern">
     <a class="skip-link" href="#main-content">Skip to content</a>
     <nav aria-label="Main navigation">
-      <a href="index.html" class="nav-logo" aria-label="QSS Seychelles – home"><img src="qss_logo.png" alt="" aria-hidden="true" width="42" height="42" /><div class="nav-logo-text">Quran &amp; Sunnah Society<span>Seychelles</span></div></a>
+      <a href="index.html" class="nav-logo" aria-label="QSS Seychelles – home"><img src="qss_logo.png" alt="" aria-hidden="true" width="42" height="42" /><div class="nav-logo-text">Qur'aan &amp; Sunnah Society<span>Seychelles</span></div></a>
       <ul class="nav-links" id="nav-links" role="list">
         <li><a href="index.html">Home</a></li><li><a href="about.html">About</a></li><li><a href="events.html">Events &amp; Classes</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="donate.html">Donate</a></li><li><a href="contact.html">Contact</a></li>
         <li><a href="admin.html" class="nav-admin active" aria-current="page">Dashboard</a></li>
@@ -49,11 +81,17 @@
       <div class="section-rule" aria-hidden="true"><span class="section-rule-line"></span><span class="section-rule-glyph">◆</span><span class="section-rule-line"></span></div>
       <div id="admin-auth-pane" class="content-card admin-auth-container">
         <h2 style="font-family:'Cormorant Garamond',serif;text-align:center;margin-bottom:0.4rem;color:var(--text-primary);font-size:1.4rem;font-weight:600">Secure Verification</h2>
-        <p style="text-align:center;color:var(--text-muted);font-size:0.88rem;margin-bottom:1.5rem">Enter your admin passcode to continue.</p>
-        <input type="password" id="admin-passcode" name="passcode" placeholder="Admin Passcode" autocomplete="current-password" style="margin-bottom:1.25rem;text-align:center;letter-spacing:0.2em" onkeydown="if(event.key==='Enter')handleAdminLogin();" aria-label="Admin passcode" />
-        <button onclick="handleAdminLogin()" class="btn-primary" style="width:100%">Verify &amp; Enter</button>
+        <p style="text-align:center;color:var(--text-muted);font-size:0.88rem;margin-bottom:1.5rem">Sign in with your admin account to continue.</p>
+        <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:1.25rem">
+          <input type="email" id="admin-email" name="email" placeholder="Admin Email" autocomplete="username" aria-label="Admin email" />
+          <input type="password" id="admin-passcode" name="passcode" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleAdminLogin();" aria-label="Admin password" />
+        </div>
+        <button onclick="handleAdminLogin()" class="btn-primary" style="width:100%">Sign In</button>
       </div>
       <div id="admin-dashboard-pane" style="display:none" aria-label="Admin dashboard">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+          <button onclick="handleAdminLogout()" class="btn-outline">Sign Out</button>
+        </div>
         <div class="admin-grid-layout">
           <aside class="admin-sidebar-menu" aria-label="Dashboard sections">
             <button class="admin-sidebar-btn active" onclick="switchAdminTab('panel-prayers',this)">🕌 Prayer Timings</button>
@@ -125,11 +163,11 @@
     <div class="geo-band" aria-hidden="true"></div>
     <footer class="site-footer" aria-label="Site footer">
       <div class="container footer-inner">
-        <div class="footer-brand"><div class="footer-logo-text">Quran and Sunnah Society</div><div class="footer-location">Mont Fleuri, Mahe, Seychelles</div></div>
+        <div class="footer-brand"><div class="footer-logo-text">Qur'aan and Sunnah Society</div><div class="footer-location">Mont Fleuri, Mahe, Seychelles</div></div>
         <nav class="footer-links" aria-label="Footer navigation"><a href="index.html">Home</a><a href="about.html">About</a><a href="events.html">Events</a><a href="gallery.html">Gallery</a><a href="donate.html">Donate</a><a href="contact.html">Contact</a></nav>
         <div class="footer-ayah"><span class="footer-arabic" lang="ar">وَقُل رَّبِّ زِدْنِي عِلْمًا</span><span class="footer-ref">Surah Ta-Ha · 20:114</span></div>
       </div>
-      <div class="container footer-bottom"><p>© Quran and Sunnah Society of Seychelles · All rights reserved</p></div>
+      <div class="container footer-bottom"><p>© Qur'aan and Sunnah Society of Seychelles · All rights reserved</p></div>
     </footer>
   </body>
 </html>

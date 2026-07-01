@@ -12,8 +12,18 @@
     <script type="module">
       import { db } from "./js/firebase-config.js";
       import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+      function escapeHTML(str){return String(str==null?"":str).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
       let allMediaItems=[];
-      window.filterGallery=function(tag,triggerEl){document.querySelectorAll(".gallery-filters button").forEach(b=>b.classList.remove("active"));if(triggerEl)triggerEl.classList.add("active");const container=document.getElementById("gallery-grid-container");const filtered=tag==="all"?allMediaItems:allMediaItems.filter(i=>i.category===tag);if(filtered.length===0){container.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:3rem 0;font-style:italic;">No photos in this category yet.</p>';return}container.innerHTML=filtered.map(item=>`<div class="gallery-item">${item.url?`<img src="${item.url}" class="gallery-image-render" alt="${item.caption?item.caption+" — community photo":"Community photo"}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'gallery-placeholder\\'><div class=\\'gallery-item-icon\\'>🖼️</div><div class=\\'gallery-item-text\\'>Image unavailable</div></div>'" />`:`<div class="gallery-placeholder"><div class="gallery-item-icon">📸</div><div class="gallery-item-text">Photo</div></div>`}${item.caption?`<div class="gallery-caption">${item.caption}</div>`:""}</div>`).join("")};
+      window.filterGallery=function(tag,triggerEl){
+        document.querySelectorAll(".gallery-filters button").forEach(b=>b.classList.remove("active"));
+        if(triggerEl)triggerEl.classList.add("active");
+        const container=document.getElementById("gallery-grid-container");
+        const filtered=tag==="all"?allMediaItems:allMediaItems.filter(i=>i.category===tag);
+        if(filtered.length===0){container.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:3rem 0;font-style:italic;">No photos in this category yet.</p>';return}
+        container.innerHTML=filtered.map(item=>`<div class="gallery-item">${item.url?`<img src="${escapeHTML(item.url)}" class="gallery-image-render" alt="${item.caption?escapeHTML(item.caption)+" — community photo":"Community photo"}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'gallery-placeholder\\'><div class=\\'gallery-item-icon\\'>🖼️</div><div class=\\'gallery-item-text\\'>Image unavailable</div></div>'" />`:`<div class="gallery-placeholder"><div class="gallery-item-icon">📸</div><div class="gallery-item-text">Photo</div></div>`}${item.caption?`<div class="gallery-caption">${escapeHTML(item.caption)}</div>`:""}</div>`).join("")};
+
       document.addEventListener("DOMContentLoaded",()=>{const allBtn=document.querySelector(".gallery-filters button");onSnapshot(query(collection(db,"gallery"),orderBy("createdAt","desc")),snap=>{allMediaItems=snap.docs.map(doc=>doc.data());filterGallery("all",allBtn)})});
     </script>
   </head>

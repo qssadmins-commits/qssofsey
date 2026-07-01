@@ -45,15 +45,53 @@
       window.showReminderDot=function(i){showReminder(i)};
       function getHijriDate(){try{return new Intl.DateTimeFormat("en-TN-u-ca-islamic",{day:"numeric",month:"long",year:"numeric"}).format(new Date())}catch(e){return""}}
       function convertToMinutes(timeStr){if(!timeStr||timeStr==="--:--")return 0;const[time,modifier]=timeStr.split(" ");let[hours,minutes]=time.split(":");hours=parseInt(hours,10);minutes=parseInt(minutes,10);if(modifier==="PM"&&hours<12)hours+=12;if(modifier==="AM"&&hours===12)hours=0;return hours*60+minutes}
-      function runPrayerEngine(prayersList){const updateClock=()=>{const now=new Date();const currentMinutes=now.getHours()*60+now.getMinutes();document.getElementById("prayer-date").textContent=now.toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});const hijri=document.getElementById("hijri-date");if(hijri)hijri.textContent=getHijriDate();let nextPrayer=null;let minDiff=Infinity;prayersList.forEach(p=>{if(p.key==="sunrise")return;const pMins=convertToMinutes(p.time);let diff=pMins-currentMinutes;if(diff<=0)diff+=1440;if(diff<minDiff){minDiff=diff;nextPrayer=p}});if(nextPrayer){const pName=document.getElementById("countdown-prayer-name");if(pName)pName.textContent=nextPrayer.en;document.getElementById("next-prayer-label").textContent="remaining until prayer";document.querySelectorAll(".prayer-card").forEach(c=>c.classList.remove("active-prayer"));const activeCard=document.getElementById(`card-node-${nextPrayer.key}`);if(activeCard)activeCard.classList.add("active-prayer");let remSecs=minDiff*60-now.getSeconds();if(remSecs<0)remSecs=0;const h=Math.floor(remSecs/3600).toString().padStart(2,"0");const m=Math.floor((remSecs%3600)/60).toString().padStart(2,"0");const s=Math.floor(remSecs%60).toString().padStart(2,"0");document.getElementById("next-prayer-countdown").textContent=`${h}:${m}:${s}`}};updateClock();setInterval(updateClock,1000)}
+
+      let livePrayersList=[];
+
+      function renderPrayerGrid(list){
+        document.getElementById("prayer-grid-container").innerHTML=list.map(p=>`<div class="prayer-card" id="card-node-${p.key}"><div class="prayer-ar">${p.ar}</div><div class="prayer-en">${p.en}</div><div class="prayer-time">${p.time||"--:--"}</div></div>`).join("");
+      }
+
+      function runPrayerEngine(){
+        const updateClock=()=>{
+          const now=new Date();const currentMinutes=now.getHours()*60+now.getMinutes();
+          document.getElementById("prayer-date").textContent=now.toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+          const hijri=document.getElementById("hijri-date");if(hijri)hijri.textContent=getHijriDate();
+          let nextPrayer=null;let minDiff=Infinity;
+          livePrayersList.forEach(p=>{if(p.key==="sunrise")return;const pMins=convertToMinutes(p.time);let diff=pMins-currentMinutes;if(diff<=0)diff+=1440;if(diff<minDiff){minDiff=diff;nextPrayer=p}});
+          if(nextPrayer){
+            const pName=document.getElementById("countdown-prayer-name");if(pName)pName.textContent=nextPrayer.en;
+            document.getElementById("next-prayer-label").textContent="remaining until prayer";
+            document.querySelectorAll(".prayer-card").forEach(c=>c.classList.remove("active-prayer"));
+            const activeCard=document.getElementById(`card-node-${nextPrayer.key}`);if(activeCard)activeCard.classList.add("active-prayer");
+            let remSecs=minDiff*60-now.getSeconds();if(remSecs<0)remSecs=0;
+            const h=Math.floor(remSecs/3600).toString().padStart(2,"0");const m=Math.floor((remSecs%3600)/60).toString().padStart(2,"0");const s=Math.floor(remSecs%60).toString().padStart(2,"0");
+            document.getElementById("next-prayer-countdown").textContent=`${h}:${m}:${s}`
+          }
+        };
+        updateClock();setInterval(updateClock,1000)
+      }
 
       document.addEventListener("DOMContentLoaded",()=>{
         renderReminders();
         const today=new Date();const mwl=calcPrayerTimes(today);
-        const calculatedList=[{key:"fajr",en:"Fajr",ar:"الفجر",time:mwl.fajr},{key:"sunrise",en:"Sunrise",ar:"الشروق",time:mwl.sunrise},{key:"dhuhr",en:"Dhuhr",ar:"الظهر",time:mwl.dhuhr},{key:"asr",en:"Asr",ar:"العصر",time:mwl.asr},{key:"maghrib",en:"Maghrib",ar:"المغرب",time:mwl.maghrib},{key:"isha",en:"Isha",ar:"العشاء",time:mwl.isha}];
-        document.getElementById("prayer-grid-container").innerHTML=calculatedList.map(p=>`<div class="prayer-card" id="card-node-${p.key}"><div class="prayer-ar">${p.ar}</div><div class="prayer-en">${p.en}</div><div class="prayer-time">${p.time||"--:--"}</div></div>`).join("");
+        const baseList=[{key:"fajr",en:"Fajr",ar:"الفجر",time:mwl.fajr},{key:"sunrise",en:"Sunrise",ar:"الشروق",time:mwl.sunrise},{key:"dhuhr",en:"Dhuhr",ar:"الظهر",time:mwl.dhuhr},{key:"asr",en:"Asr",ar:"العصر",time:mwl.asr},{key:"maghrib",en:"Maghrib",ar:"المغرب",time:mwl.maghrib},{key:"isha",en:"Isha",ar:"العشاء",time:mwl.isha}];
+
+        livePrayersList=baseList;
+        renderPrayerGrid(livePrayersList);
         const jumuahEl=document.getElementById("jumuah-time");if(jumuahEl)jumuahEl.textContent=mwl.dhuhr;
-        runPrayerEngine(calculatedList);
+        runPrayerEngine();
+
+        onSnapshot(doc(db,"site","prayers"),snap=>{
+          if(!snap.exists())return;
+          const data=snap.data();
+          if(data.list&&Array.isArray(data.list)){
+            livePrayersList=baseList.map(p=>{const override=data.list.find(o=>o.key===p.key);return(override&&override.time)?{...p,time:override.time}:p});
+            renderPrayerGrid(livePrayersList);
+          }
+          if(data.jumuah&&jumuahEl)jumuahEl.textContent=data.jumuah;
+        });
+
         onSnapshot(doc(db,"site","config"),snap=>{if(!snap.exists())return;const data=snap.data();const banner=document.getElementById("announcement-banner");if(data.announcement&&banner){document.getElementById("announcement-text").textContent=data.announcement;banner.classList.add("has-content")}});
         const io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");io.unobserve(e.target)}})},{threshold:0.06});
         document.querySelectorAll(".reveal").forEach(el=>io.observe(el));
